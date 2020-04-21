@@ -13,7 +13,7 @@ from flask import Flask, jsonify
 
 engine = create_engine("sqlite:///hawaii.sqlite")
 
-# reflect existing database
+# reflect an existing database into a new model
 Base = automap_base()
 
 # reflect the tables
@@ -35,11 +35,16 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return (
-        f"Welcome to the Hawaiii Climate API!<br/>"
+        f"Welcome to the Hawaii Climate API!<br/>"
+        f"<br/>"
         f"Available Routes:<br/>"
+        f"<br/>"
         f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start>/<end>"
+        f"<br/>"
+        f"Note: For the route below, insert a start date or a start/end date in the format YYYY-MM-DD<br/>"
+        f"/api/v1.0/start-date/end-date"
     )
 
 # Convert the query results to a dictionary using date as the key and prcp as the value
@@ -50,7 +55,7 @@ def precipitation():
     # query
     results = session.query(Measurement.date, Measurement.prcp).all()
 
-    # create list of dictionaries
+    # create a dictionary from the row data and append to a list of prcp info
     prcp_list = []
     for date, prcp in results:
         prcp_dict = {}
@@ -81,16 +86,13 @@ def tobs():
        Measurement.station,
        Measurement.date,
        Measurement.tobs]
-    
-    # one year fromo current date
+       
     prev_date = dt.date(2017, 8, 23) - dt.timedelta(days = 365)
-    
-    # query
+       
     results = session.query(*sel_measure).\
         filter(Measurement.station == 'USC00519281').\
         filter(Measurement.date >= prev_date).all()
-    
-    # convert to list
+
     temp_list = list(np.ravel(results))
 
     return jsonify(temp_list)
@@ -106,14 +108,14 @@ def stats(start=None, end=None):
     # we will be calculating min, avg, and max temps
     temp_stats = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
 
-    # if no end date is given, calculate min/max/avg for all dates greater than or equal to start
+    # if no end date is given, calculate temps for all dates greater than or equal to start
     if not end:
         temp_results = session.query(*temp_stats).filter(Measurement.date >= start).all()
         temp_result = list(np.ravel(temp_results))
         return jsonify(temp_result)
     
-    # calculate min/max/avg for dates between the start and end date, inclusive
-    temp_results = session.query(*temp_stats).filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    # calculate temps for dates between the start and end date, inclusive
+    temp_results = session.query(*temp_stats).filter(Measurement.date >= start, Measurement.date <= end).all()
     temp_result = list(np.ravel(temp_results))
     
     return jsonify(temp_result)
